@@ -38,7 +38,7 @@ public:
 #ifdef CUSTOM_OUTPUT
         *prettyOut << beginStr;
 #else
-        *prettyOut << "you should define custom output ";
+        *prettyOut << beginStr;
 #endif
 
         for (auto iter = container.begin(); iter != container.end();) {
