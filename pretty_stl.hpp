@@ -4,8 +4,10 @@
 #include <iostream>
 
 
+template<class ContainerElement>
 class PrettyStl {
     std::ostream *prettyOut = &std::cout;
+    std::string (*prettyOutput)(ContainerElement const& element) = nullptr;
 public:
     explicit PrettyStl(std::ostream& out = std::cout) {
         setOutVariable(out);
@@ -13,6 +15,11 @@ public:
 
     void setOutVariable(std::ostream& newOut) {
         prettyOut = &newOut;
+    }
+
+    void setElementOutput(std::string (*outputFunc)(ContainerElement const& element)) {
+#define CUSTOM_OUTPUT
+        prettyOutput = outputFunc;
     }
 
     template<typename Container>
@@ -28,10 +35,14 @@ public:
             std::string const& separatingMask = ", ",
             std::string const& beginStr = "{",
             std::string const& endStr = "} ") {
+#ifdef CUSTOM_OUTPUT
         *prettyOut << beginStr;
+#else
+        *prettyOut << beginStr;
+#endif
 
         for (auto iter = container.begin(); iter != container.end();) {
-            *prettyOut << *iter;
+            *prettyOut << prettyOutput(*iter);
             if (++iter != container.end()) {
                 *prettyOut << separatingMask;
             }
