@@ -1,56 +1,164 @@
-#ifndef TEST_PRETTY_STL_HPP
-#define TEST_PRETTY_STL_HPP
+#ifndef PRETTY_STL_HPP
+#define PRETTY_STL_HPP
+
 #include <string>
 #include <iostream>
+#include <unordered_map>
 
 
-template<class ContainerElement>
-class PrettyStl {
-    std::ostream *prettyOut = &std::cout;
-    std::string (*prettyOutput)(ContainerElement const& element) = nullptr;
-public:
-    explicit PrettyStl(std::ostream& out = std::cout) {
-        setOutVariable(out);
-    }
+/// \namespace PrettySTL namespace
+namespace Pretty {
+    using ElementConvertFunction = std::string (*)(void const *);
 
-    void setOutVariable(std::ostream& newOut) {
-        prettyOut = &newOut;
-    }
+    /// \brief Print parameters
+    enum Params {
+        /// separator between container elements
+        separator = 0,
+        /// beginning of output
+        begin,
+        /// ending of output
+        end
+    };
 
-    void setElementOutput(std::string (*outputFunc)(ContainerElement const& element)) {
-#define CUSTOM_OUTPUT
-        prettyOutput = outputFunc;
-    }
+    /// \class STL pretty output class
+    class Stl {
+        static std::string const
+                defaultSeparator,
+                defaultBegin,
+                defaultEnd;
 
-    template<typename Container>
-    std::ostream &operator<<(Container const &container) {
-        print(container);
+        std::ostream *out = &std::cout;
 
-        return *prettyOut;
-    }
+        ElementConvertFunction elementConvertFunction = nullptr;
+    public:
 
-    template<typename Container>
-    void print(
-            Container const &container,
-            std::string const& separatingMask = ", ",
-            std::string const& beginStr = "{",
-            std::string const& endStr = "} ") {
-#ifdef CUSTOM_OUTPUT
-        *prettyOut << beginStr;
-#else
-        *prettyOut << beginStr;
-#endif
-
-        for (auto iter = container.begin(); iter != container.end();) {
-            *prettyOut << prettyOutput(*iter);
-            if (++iter != container.end()) {
-                *prettyOut << separatingMask;
-            }
+        /// \brief Constructor allows to set custom output
+        /// \param out a custom output (file, for example)
+        explicit Stl(std::ostream &out = std::cout) : out(&out) {
         }
 
-        *prettyOut << endStr;
-    }
-};
+        /// \brief Constructor allows to set custom output of elements
+        /// \param convertFunction a function of the form std::string (*)(void const* element),
+        /// which takes an element as param and returns it as a string
+        explicit Stl(ElementConvertFunction convertFunction) : elementConvertFunction(convertFunction) {
+        }
 
+        /// \brief Constructor allows to set both custom output of elements and custom output
+        /// \param out a custom output (file, for example)
+        /// \param convertFunction a function of the form std::string (*)(void const* element),
+        /// which takes an element as param and returns it as a string
+        explicit Stl(std::ostream &out, ElementConvertFunction convertFunction) : out(&out),
+                                                                                  elementConvertFunction(
+                                                                                          convertFunction) {
+        }
 
-#endif // TEST_PRETTY_STL_HPP
+        /// \brief Functions allows to set custom output
+        /// \param out_ a custom output (file, for example)
+        void setOutVariable(std::ostream &out_) {
+            out = &out_;
+        }
+
+        /// \brief Function allows to set custom output of elements
+        /// \param convertFunction a function of the form std::string (*)(void const* element),
+        /// which takes an element as param and returns it as a string
+        void setElementConvertFunction(std::string (*outputFunc)(void const *element)) {
+            elementConvertFunction = outputFunc;
+        }
+
+        /// \brief Shortened setElementConvertFunction
+        void f(std::string (*outputFunc)(void const *element)) {
+            elementConvertFunction = outputFunc;
+        }
+
+        /// \brief Overloading the output operator. Doesn't work for built-in types
+        /// \param container container to print
+        /// \return out variable for chain output
+        template<class Container>
+        std::ostream &operator<<(Container const &container) {
+            print(container);
+
+            return *out;
+        }
+
+        /// \brief Function that prints the container. For built-in types please use printBuiltIn
+        /// \param container container itself
+        /// \param separatorStr string that will be used as a separator between elements
+        /// \param beginStr string that will be printed at the beginning
+        /// \param endStr string that will be printed at the end
+        template<class Container>
+        void print(
+                Container const &container,
+                std::string const &separatorStr = defaultSeparator,
+                std::string const &beginStr = defaultBegin,
+                std::string const &endStr = defaultEnd) {
+            *out << beginStr;
+
+            for (auto iter = container.begin(); iter != container.end();) {
+                *out << elementConvertFunction(&(*iter));
+                if (++iter != container.end()) {
+                    *out << separatorStr;
+                }
+            }
+
+            *out << endStr;
+        }
+
+        /// \brief Function that prints the container. For built-in types please use printBuiltIn
+        /// \param container container itself
+        /// \param params input parameters -- you can look them in Pretty::Params enum
+        /// \example print(container, {{Pretty::separator, "\n"}});
+        template<class Container>
+        void print(Container const &container, std::unordered_map<Params, std::string> const &params) {
+            print(
+                    container,
+                    params.contains(separator) ? params.at(separator) : defaultSeparator,
+                    params.contains(begin) ? params.at(begin) : defaultBegin,
+                    params.contains(end) ? params.at(end) : defaultEnd
+            );
+        }
+
+        /// \brief Function that prints the container. Use this func for built-in types
+        /// \param container container itself
+        /// \param separatingMask string that will be used as a separator between elements
+        /// \param beginStr string that will be printed at the beginning
+        /// \param endStr string that will be printed at the end
+        template<class Container>
+        void printBuiltIn(
+                Container const &container,
+                std::string const &separatingMask = defaultSeparator,
+                std::string const &beginStr = defaultBegin,
+                std::string const &endStr = defaultEnd) {
+            *out << beginStr;
+
+            for (auto iter = container.begin(); iter != container.end();) {
+                *out << *iter;
+                if (++iter != container.end()) {
+                    *out << separatingMask;
+                }
+            }
+
+            *out << endStr;
+        }
+
+        /// \brief Function that prints the container. Use this func for built-in types
+        /// \param container container itself
+        /// \param params input parameters -- you can look them in Pretty::Params enum
+        /// \example print(container, {{Pretty::separator, "\n"}});
+        template<class Container>
+        void printBuiltIn(Container const &container, std::unordered_map<Params, std::string> const &params) {
+            printBuiltIn(
+                    container,
+                    params.contains(separator) ? params.at(separator) : defaultSeparator,
+                    params.contains(begin) ? params.at(begin) : defaultBegin,
+                    params.contains(end) ? params.at(end) : defaultEnd
+            );
+        }
+    };
+
+    std::string const
+            Stl::defaultSeparator = ", ",
+            Stl::defaultBegin = "{",
+            Stl::defaultEnd = "}\n";
+}
+
+#endif // PRETTY_STL_HPP
